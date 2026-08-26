@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)   # để clangd/IDE đọc được
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+option(ENGINE_BUILD_EDITOR "Build editor" ON)
 include(cmake/Dependencies.cmake)
 
 add_subdirectory(engine/math)

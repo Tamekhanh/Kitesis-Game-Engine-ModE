@@ -4,6 +4,7 @@
     src/camera2d.cpp
     src/texture2d.cpp
     src/sprite_component.cpp
+    src/framebuffer.cpp
 )
 add_library(Engine::Renderer ALIAS engine_renderer)
 
