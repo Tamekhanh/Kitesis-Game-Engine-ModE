@@ -1,4 +1,9 @@
-add_executable(editor main.cpp)
+add_executable(editor
+    main.cpp
+    panels/hierarchy_panel.cpp
+    panels/inspector_panel.cpp
+    panels/asset_browser_panel.cpp
+)
 
 target_link_libraries(editor PRIVATE
     Engine::Core
@@ -6,3 +11,5 @@ target_link_libraries(editor PRIVATE
     Engine::Renderer
     imgui
 )
+
+target_include_directories(editor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

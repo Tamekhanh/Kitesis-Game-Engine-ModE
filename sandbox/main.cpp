@@ -8,7 +8,8 @@
 #include "engine/core/logger.h"
 #include "move_component.h"
 
-int main() {
+int main()
+{
     engine::core::Logger::Info("Starting engine...");
 
     const float kWidth = 800.0f;
@@ -25,14 +26,16 @@ int main() {
     engine::core::GameObject root("Root");
 
     auto playerOwned = std::make_unique<engine::core::GameObject>("Player");
-    engine::core::GameObject* player = root.AddChild(std::move(playerOwned));
+    engine::core::GameObject *player = root.AddChild(std::move(playerOwned));
     player->transform.position = {350.0f, 250.0f};
-    player->AddComponent<engine::renderer::SpriteComponent>(spriteRenderer, texture, 100.0f, 100.0f);
+    auto *playerSprite = player->AddComponent<engine::renderer::SpriteComponent>(spriteRenderer, 100.0f, 100.0f);
+    playerSprite->BindTexture(texture, "assets/sprite.png");
     player->AddComponent<MoveComponent>(200.0f); // 200 pixel/giây
 
     float lastTime = 0.0f;
 
-    while (!window.ShouldClose()) {
+    while (!window.ShouldClose())
+    {
         window.PollEvents();
 
         float currentTime = engine::platform::Window::GetTime();

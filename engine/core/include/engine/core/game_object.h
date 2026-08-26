@@ -6,57 +6,65 @@
 #include <string>
 #include <type_traits>
 
-namespace engine::core {
+namespace engine::core
+{
 
-class GameObject {
-public:
-    explicit GameObject(const std::string& name = "GameObject");
-    ~GameObject();
+    class GameObject
+    {
+    public:
+        explicit GameObject(const std::string &name = "GameObject");
+        ~GameObject();
 
-    // --- Transform ---
-    engine::math::Transform transform;
-    engine::math::Vector2 GetWorldPosition() const;
+        // --- Transform ---
+        engine::math::Transform transform;
+        engine::math::Vector2 GetWorldPosition() const;
 
-    // --- Hierarchy ---
-    GameObject* Parent() const { return m_parent; }
-    const std::vector<std::unique_ptr<GameObject>>& Children() const { return m_children; }
-    GameObject* AddChild(std::unique_ptr<GameObject> child);
+        // --- Hierarchy ---
+        GameObject *Parent() const { return m_parent; }
+        const std::vector<std::unique_ptr<GameObject>> &Children() const { return m_children; }
+        GameObject *AddChild(std::unique_ptr<GameObject> child);
 
-    // --- Component ---
-    template<typename T, typename... Args>
-    T* AddComponent(Args&&... args) {
-        static_assert(std::is_base_of<Component, T>::value,
-                      "T phai ke thua tu Component");
-        auto comp = std::make_unique<T>(std::forward<Args>(args)...);
-        T* raw = comp.get();
-        comp->m_owner = this;
-        m_components.push_back(std::move(comp));
-        raw->OnStart();
-        return raw;
-    }
-
-    template<typename T>
-    T* GetComponent() {
-        for (auto& c : m_components) {
-            if (T* casted = dynamic_cast<T*>(c.get())) {
-                return casted;
-            }
+        // --- Component ---
+        template <typename T, typename... Args>
+        T *AddComponent(Args &&...args)
+        {
+            static_assert(std::is_base_of<Component, T>::value,
+                          "T phai ke thua tu Component");
+            auto comp = std::make_unique<T>(std::forward<Args>(args)...);
+            T *raw = comp.get();
+            comp->m_owner = this;
+            m_components.push_back(std::move(comp));
+            raw->OnStart();
+            return raw;
         }
-        return nullptr;
-    }
 
-    // --- Lifecycle ---
-    void Update(float deltaTime);
-    void Render();
+        template <typename T>
+        T *GetComponent()
+        {
+            for (auto &c : m_components)
+            {
+                if (T *casted = dynamic_cast<T *>(c.get()))
+                {
+                    return casted;
+                }
+            }
+            return nullptr;
+        }
 
-    const std::string& Name() const { return m_name; }
-    bool active = true;
+        // --- Lifecycle ---
+        void Update(float deltaTime);
+        void Render();
+        void ClearChildren() { m_children.clear(); }
+        const std::vector<std::unique_ptr<Component>> &Components() const { return m_components; }
 
-private:
-    std::string m_name;
-    GameObject* m_parent = nullptr;
-    std::vector<std::unique_ptr<GameObject>> m_children;
-    std::vector<std::unique_ptr<Component>> m_components;
-};
+        const std::string &Name() const { return m_name; }
+        bool active = true;
+
+    private:
+        std::string m_name;
+        GameObject *m_parent = nullptr;
+        std::vector<std::unique_ptr<GameObject>> m_children;
+        std::vector<std::unique_ptr<Component>> m_components;
+    };
 
 } // namespace engine::core

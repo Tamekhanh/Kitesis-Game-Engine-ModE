@@ -5,6 +5,7 @@
     src/texture2d.cpp
     src/sprite_component.cpp
     src/framebuffer.cpp
+    src/scene_serializer.cpp
 )
 add_library(Engine::Renderer ALIAS engine_renderer)
 
@@ -13,5 +14,5 @@ target_include_directories(engine_renderer
 )
 target_link_libraries(engine_renderer
     PUBLIC  Engine::Platform Engine::Core
-    PRIVATE stb_image
+    PRIVATE stb_image nlohmann_json::nlohmann_json
 )
