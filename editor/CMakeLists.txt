@@ -3,6 +3,9 @@ add_executable(editor
     panels/hierarchy_panel.cpp
     panels/inspector_panel.cpp
     panels/asset_browser_panel.cpp
+    panels/add_component_popup.cpp
+    panels/sprite_editor_popup.cpp
+    panels/animation_panel.cpp
 )
 
 target_link_libraries(editor PRIVATE

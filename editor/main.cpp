@@ -8,6 +8,7 @@
 #include "engine/renderer/texture2d.h"
 #include "engine/renderer/sprite_component.h"
 #include "engine/renderer/scene_serializer.h"
+#include "engine/renderer/sprite_component.h"
 
 #include <glad/gl.h>
 #include <imgui.h>
@@ -22,6 +23,8 @@
 #include "panels/hierarchy_panel.h"
 #include "panels/inspector_panel.h"
 #include "panels/asset_browser_panel.h"
+#include "panels/sprite_editor_popup.h"
+#include "panels/animation_panel.h"
 #include <vector>
 #include "engine/core/game_object.h"
 
@@ -125,6 +128,8 @@ int main()
 
     auto framebuffer = std::make_unique<engine::renderer::Framebuffer>(1280, 720);
     engine::renderer::SpriteRenderer sceneRenderer;
+    engine::renderer::SpriteComponent::SetDefaultRenderer(&sceneRenderer);
+
     engine::renderer::Camera2D sceneCamera(1280.0f, 720.0f);
 
     EditorState editorState;
@@ -133,10 +138,15 @@ int main()
     engine::core::GameObject sceneRoot("SceneRoot");
     std::unique_ptr<engine::renderer::Texture2D> demoTexture;
     bool sceneBuilt = false;
+    float lastTime = engine::platform::Window::GetTime();
 
     while (!window.ShouldClose())
     {
         window.PollEvents();
+
+        float currentTime = engine::platform::Window::GetTime();
+        float deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -198,7 +208,9 @@ int main()
 
             editor::DrawHierarchyPanel(sceneRoot, editorState);
             editor::DrawInspectorPanel(editorState);
+            editor::DrawAnimationPanel(editorState);
             assetBrowser.Draw();
+            editor::DrawSpriteEditorPopup();
 
             ImGui::Begin("Scene");
 
@@ -212,6 +224,8 @@ int main()
             framebuffer->Bind();
             glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            sceneRoot.Update(deltaTime);
 
             sceneRenderer.Begin(sceneCamera);
             sceneRoot.Render();

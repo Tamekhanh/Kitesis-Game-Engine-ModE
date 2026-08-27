@@ -15,6 +15,8 @@ namespace engine::core
         explicit GameObject(const std::string &name = "GameObject");
         ~GameObject();
 
+        void SetName(const std::string &name) { m_name = name; }
+        std::unique_ptr<GameObject> RemoveChild(GameObject *child);
         // --- Transform ---
         engine::math::Transform transform;
         engine::math::Vector2 GetWorldPosition() const;

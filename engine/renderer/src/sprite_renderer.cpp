@@ -52,7 +52,7 @@ SpriteRenderer::SpriteRenderer() {
 
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -74,8 +74,31 @@ void SpriteRenderer::Begin(const Camera2D& camera) {
     glUniformMatrix4fv(loc, 1, GL_FALSE, camera.GetProjection().m);
 }
 
+void SpriteRenderer::UpdateQuadUVs(float uMin, float vMin, float uMax, float vMax) {
+    // Cap nhat lai 4 gia tri UV (2 so cuoi cua moi vertex) trong VBO hien co
+    float uvs[] = {
+        uMin, vMax,
+        uMax, vMax,
+        uMax, vMin,
+        uMin, vMax,
+        uMax, vMin,
+        uMin, vMin,
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    for (int i = 0; i < 6; ++i) {
+        // Moi vertex chiem 4 float (x,y,u,v), UV nam o offset +2
+        glBufferSubData(GL_ARRAY_BUFFER,
+                         (i * 4 + 2) * sizeof(float),
+                         2 * sizeof(float),
+                         &uvs[i * 2]);
+    }
+}
+
 void SpriteRenderer::DrawQuad(float x, float y, float width, float height,
                                float r, float g, float b) {
+    UpdateQuadUVs(0.0f, 0.0f, 1.0f, 1.0f);
+
     unsigned int id = m_shader->Id();
     float centerX = x + width / 2.0f;
     float centerY = y + height / 2.0f;
@@ -91,6 +114,14 @@ void SpriteRenderer::DrawQuad(float x, float y, float width, float height,
 
 void SpriteRenderer::DrawTexturedQuad(float x, float y, float width, float height,
                                        const Texture2D& texture) {
+    DrawTexturedQuadUV(x, y, width, height, texture, 0.0f, 0.0f, 1.0f, 1.0f);
+}
+
+void SpriteRenderer::DrawTexturedQuadUV(float x, float y, float width, float height,
+                                        const Texture2D& texture,
+                                        float uMin, float vMin, float uMax, float vMax) {
+    UpdateQuadUVs(uMin, vMin, uMax, vMax);
+
     unsigned int id = m_shader->Id();
     float centerX = x + width / 2.0f;
     float centerY = y + height / 2.0f;

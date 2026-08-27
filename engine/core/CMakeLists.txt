@@ -2,6 +2,7 @@ add_library(engine_core STATIC
     src/logger.cpp
     src/game_object.cpp
     src/project.cpp
+    src/component_registry.cpp
 )
 add_library(Engine::Core ALIAS engine_core)
 
