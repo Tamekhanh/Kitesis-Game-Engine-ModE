@@ -82,25 +82,9 @@ namespace editor
                 ImGui::SameLine();
                 ImGui::BeginGroup();
                 ImGui::Text("Grid: %d x %d", sprite.Columns(), sprite.Rows());
-
-                if (ImGui::Button("Open Sprite Editor"))
-                {
-                    OpenSpriteEditorForComponent(sprite);
-                }
-                if (sprite.Columns() * sprite.Rows() > 1)
-                {
-                    int frame = sprite.FrameIndex();
-                    int maxFrame = sprite.Columns() * sprite.Rows() - 1;
-                    if (ImGui::SliderInt("Frame", &frame, 0, maxFrame))
-                    {
-                        sprite.SetFrame(frame);
-                    }
-                }
                 ImGui::EndGroup();
             }
         }
-
-        DrawSpriteEditorPopup();
     }
 
     void DrawInspectorPanel(EditorState &state)
