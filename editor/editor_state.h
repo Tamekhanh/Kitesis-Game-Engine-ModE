@@ -4,4 +4,6 @@
 class EditorState {
 public:
     engine::core::GameObject* selectedObject = nullptr;
+
+    int selectedTileIndex = -1;
 };

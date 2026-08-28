@@ -2,6 +2,7 @@
 #include "engine/platform/window_internal.h"
 #include "engine/core/logger.h"
 #include "engine/core/project.h"
+#include "engine/core/game_object.h"
 #include "engine/renderer/framebuffer.h"
 #include "engine/renderer/sprite_renderer.h"
 #include "engine/renderer/camera2d.h"
@@ -9,6 +10,7 @@
 #include "engine/renderer/sprite_component.h"
 #include "engine/renderer/scene_serializer.h"
 #include "engine/renderer/sprite_component.h"
+#include "engine/renderer/tilemap_component.h"
 
 #include <glad/gl.h>
 #include <imgui.h>
@@ -25,8 +27,8 @@
 #include "panels/asset_browser_panel.h"
 #include "panels/sprite_editor_popup.h"
 #include "panels/animation_panel.h"
+#include "panels/tile_palette_panel.h"
 #include <vector>
-#include "engine/core/game_object.h"
 
 static void DrawWelcomeScreen()
 {
@@ -129,6 +131,7 @@ int main()
     auto framebuffer = std::make_unique<engine::renderer::Framebuffer>(1280, 720);
     engine::renderer::SpriteRenderer sceneRenderer;
     engine::renderer::SpriteComponent::SetDefaultRenderer(&sceneRenderer);
+    engine::renderer::TilemapComponent::SetDefaultRenderer(&sceneRenderer);
 
     engine::renderer::Camera2D sceneCamera(1280.0f, 720.0f);
 
@@ -177,9 +180,23 @@ int main()
                 playerSprite->BindTexture(*demoTexture, spritePath);
 
                 assetBrowser.SetRootDirectory(engine::core::Project::AssetPath(""));
+                
+                //temp tilemap
+                auto tilemapOwned = std::make_unique<engine::core::GameObject>("TestTilemap");
+                engine::core::GameObject *tilemapObj = sceneRoot.AddChild(std::move(tilemapOwned));
+                tilemapObj->transform.position = {400.0f, 50.0f};
 
-                sceneBuilt = true;
+                auto *tilemap = tilemapObj->AddComponent<engine::renderer::TilemapComponent>();
+                tilemap->Resize(5, 5);
+                tilemap->BindTileset(*demoTexture, spritePath);
+                tilemap->SetTileSize(32.0f);
 
+                // Ve mot vai o test, dung tile index 0 (o dau tien trong tileset)
+                for (int x = 0; x < 5; ++x)
+                {
+                    tilemap->SetTile(x, 4, 0); // hang duoi cung: ve dam dac
+                }
+                tilemap->SetTile(2, 2, 0);
                 sceneBuilt = true;
             }
 
@@ -209,6 +226,7 @@ int main()
             editor::DrawHierarchyPanel(sceneRoot, editorState);
             editor::DrawInspectorPanel(editorState);
             editor::DrawAnimationPanel(editorState);
+            editor::DrawTilePalettePanel(editorState);
             assetBrowser.Draw();
             editor::DrawSpriteEditorPopup();
 
@@ -236,6 +254,73 @@ int main()
                 (ImTextureID)(intptr_t)framebuffer->GetColorTextureId(),
                 panelSize,
                 ImVec2(0, 1), ImVec2(1, 0));
+
+            // --- Ve outline gioi han cua Tilemap, hien bat ke co dang cam tile hay khong ---
+            if (editorState.selectedObject) {
+                auto* tilemapForOutline = editorState.selectedObject->GetComponent<engine::renderer::TilemapComponent>();
+                if (tilemapForOutline) {
+                    ImVec2 imageMin = ImGui::GetItemRectMin();
+                    auto worldPos = editorState.selectedObject->GetWorldPosition();
+                    float tileSize = tilemapForOutline->TileSize();
+                    float gridW = tilemapForOutline->Width() * tileSize;
+                    float gridH = tilemapForOutline->Height() * tileSize;
+
+                    ImDrawList* drawList = ImGui::GetWindowDrawList();
+                    ImVec2 gridMin(imageMin.x + worldPos.x, imageMin.y + worldPos.y);
+                    ImVec2 gridMax(gridMin.x + gridW, gridMin.y + gridH);
+
+                    // Khung ngoai cung, ro net
+                    drawList->AddRect(gridMin, gridMax, IM_COL32(0, 255, 180, 255), 0.0f, 0, 2.5f);
+
+                    // Ke luoi mo ben trong, giup nhin ro tung o
+                    for (int x = 1; x < tilemapForOutline->Width(); ++x) {
+                        float lx = gridMin.x + x * tileSize;
+                        drawList->AddLine(ImVec2(lx, gridMin.y), ImVec2(lx, gridMax.y),
+                                           IM_COL32(0, 255, 180, 60));
+                    }
+                    for (int y = 1; y < tilemapForOutline->Height(); ++y) {
+                        float ly = gridMin.y + y * tileSize;
+                        drawList->AddLine(ImVec2(gridMin.x, ly), ImVec2(gridMax.x, ly),
+                                           IM_COL32(0, 255, 180, 60));
+                    }
+                }
+            }
+
+            // --- Ve tile bang chuot, chi khi dang chon GameObject co TilemapComponent VA da chon tile ---
+            if (editorState.selectedObject && editorState.selectedTileIndex >= 0) {
+                auto* tilemap = editorState.selectedObject->GetComponent<engine::renderer::TilemapComponent>();
+                if (tilemap && ImGui::IsItemHovered()) {
+                    ImVec2 imageMin = ImGui::GetItemRectMin();
+                    ImVec2 mousePos = ImGui::GetMousePos();
+
+                    // Toa do pixel tuong doi trong framebuffer (0,0 la goc tren-trai panel Scene)
+                    float localX = mousePos.x - imageMin.x;
+                    float localY = mousePos.y - imageMin.y;
+
+                    auto worldPos = editorState.selectedObject->GetWorldPosition();
+                    float tileSize = tilemap->TileSize();
+
+                    // Doi toa do pixel panel -> toa do o luoi
+                    int tileX = (int)((localX - worldPos.x) / tileSize);
+                    int tileY = (int)((localY - worldPos.y) / tileSize);
+
+                    if (tileX >= 0 && tileX < tilemap->Width() && tileY >= 0 && tileY < tilemap->Height()) {
+                        // Highlight o dang tro toi
+                        ImDrawList* drawList = ImGui::GetWindowDrawList();
+                        ImVec2 cellMin(imageMin.x + worldPos.x + tileX * tileSize,
+                                       imageMin.y + worldPos.y + tileY * tileSize);
+                        ImVec2 cellMax(cellMin.x + tileSize, cellMin.y + tileSize);
+                        drawList->AddRect(cellMin, cellMax, IM_COL32(255, 255, 0, 200), 0.0f, 0, 2.0f);
+
+                        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                            tilemap->SetTile(tileX, tileY, editorState.selectedTileIndex);
+                        }
+                        if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+                            tilemap->SetTile(tileX, tileY, -1);
+                        }
+                    }
+                }
+            }
 
             if (ImGui::BeginDragDropTarget())
             {

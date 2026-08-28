@@ -4,7 +4,10 @@
 #include "engine/renderer/texture2d.h"
 #include "engine/core/project.h"
 #include "engine/renderer/animation_component.h"
+#include "engine/renderer/tilemap_component.h"
+
 #include "sprite_editor_popup.h"
+
 #include <imgui.h>
 #include <memory>
 #include <vector>
@@ -87,6 +90,64 @@ namespace editor
         }
     }
 
+    static void DrawTilemapComponentUI(engine::renderer::TilemapComponent &tilemap)
+    {
+        if (ImGui::CollapsingHeader("Tilemap Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+
+            // --- Gan tileset, giong het co che cua SpriteComponent ---
+            std::string label = tilemap.TexturePath().empty()
+                                    ? "Keo tileset tu Assets vao day"
+                                    : tilemap.TexturePath();
+
+            ImGui::Button(label.c_str(), ImVec2(-1, 40));
+
+            if (ImGui::BeginDragDropTarget())
+            {
+                if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE_PATH"))
+                {
+                    std::string droppedPath(static_cast<const char *>(payload->Data));
+                    s_inspectorTextures.push_back(
+                        std::make_unique<engine::renderer::Texture2D>(droppedPath));
+                    tilemap.BindTileset(*s_inspectorTextures.back(), droppedPath);
+                }
+                ImGui::EndDragDropTarget();
+            }
+
+            if (!tilemap.TexturePath().empty())
+            {
+                ImGui::Text("Tileset grid: %d x %d", tilemap.TilesetColumns(), tilemap.TilesetRows());
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            // --- Kich thuoc luoi tilemap (khac voi kich thuoc luoi tileset o tren) ---
+            static int editWidth = tilemap.Width();
+            static int editHeight = tilemap.Height();
+            static engine::renderer::TilemapComponent *lastTilemap = nullptr;
+            if (lastTilemap != &tilemap)
+            {
+                editWidth = tilemap.Width();
+                editHeight = tilemap.Height();
+                lastTilemap = &tilemap;
+            }
+
+            ImGui::DragInt("Grid Width", &editWidth, 1, 1, 200);
+            ImGui::DragInt("Grid Height", &editHeight, 1, 1, 200);
+            if (ImGui::Button("Resize Grid"))
+            {
+                tilemap.Resize(editWidth, editHeight);
+            }
+
+            float tileSize = tilemap.TileSize();
+            if (ImGui::DragFloat("Tile Size (px)", &tileSize, 1.0f, 1.0f, 512.0f))
+            {
+                tilemap.SetTileSize(tileSize);
+            }
+        }
+    }
+
     void DrawInspectorPanel(EditorState &state)
     {
         ImGui::Begin("Inspector");
@@ -123,6 +184,10 @@ namespace editor
             if (dynamic_cast<engine::renderer::AnimationComponent *>(comp.get()))
             {
                 ImGui::TextDisabled("Animation Component (xem tab 'Animation' de chinh sua)");
+            }
+            if (auto *tilemap = dynamic_cast<engine::renderer::TilemapComponent *>(comp.get()))
+            {
+                DrawTilemapComponentUI(*tilemap);
             }
         }
 

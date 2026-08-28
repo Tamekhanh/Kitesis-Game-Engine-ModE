@@ -6,6 +6,7 @@
 #include <fstream>
 #include <unordered_map>
 #include "engine/renderer/animation_component.h"
+#include "engine/renderer/tilemap_component.h"
 namespace engine::renderer
 {
 
@@ -41,6 +42,27 @@ namespace engine::renderer
                 c["frames"] = framesJson;
                 c["frameDuration"] = anim->FrameDuration();
                 c["looping"] = anim->Looping();
+                componentsJson.push_back(c);
+            }
+            if (auto *tilemap = dynamic_cast<TilemapComponent *>(comp.get()))
+            {
+                json c;
+                c["type"] = "TilemapComponent";
+                c["texturePath"] = tilemap->TexturePath();
+                c["width"] = tilemap->Width();
+                c["height"] = tilemap->Height();
+                c["tileSize"] = tilemap->TileSize();
+
+                json tilesJson = json::array();
+                for (int y = 0; y < tilemap->Height(); ++y)
+                {
+                    for (int x = 0; x < tilemap->Width(); ++x)
+                    {
+                        tilesJson.push_back(tilemap->GetTile(x, y));
+                    }
+                }
+                c["tiles"] = tilesJson;
+
                 componentsJson.push_back(c);
             }
         }
@@ -139,6 +161,47 @@ namespace engine::renderer
                     }
                     anim->SetFrameDuration(c.value("frameDuration", 0.1f));
                     anim->SetLooping(c.value("looping", true));
+                }
+                if (type == "TilemapComponent")
+                {
+                    auto *tilemap = obj->AddComponent<TilemapComponent>();
+
+                    int width = c.value("width", 10);
+                    int height = c.value("height", 10);
+                    tilemap->Resize(width, height);
+                    tilemap->SetTileSize(c.value("tileSize", 32.0f));
+
+                    std::string texPath = c.value("texturePath", "");
+                    if (!texPath.empty())
+                    {
+                        Texture2D *tex = nullptr;
+                        auto it = textureCache.find(texPath);
+                        if (it != textureCache.end())
+                        {
+                            tex = it->second;
+                        }
+                        else
+                        {
+                            textureLibrary.push_back(std::make_unique<Texture2D>(texPath));
+                            tex = textureLibrary.back().get();
+                            textureCache[texPath] = tex;
+                        }
+                        tilemap->BindTileset(*tex, texPath);
+                    }
+
+                    if (c.contains("tiles"))
+                    {
+                        std::vector<int> tiles = c["tiles"].get<std::vector<int>>();
+                        int i = 0;
+                        for (int y = 0; y < height && i < (int)tiles.size(); ++y)
+                        {
+                            for (int x = 0; x < width && i < (int)tiles.size(); ++x)
+                            {
+                                tilemap->SetTile(x, y, tiles[i]);
+                                i++;
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -8,6 +8,7 @@
     src/scene_serializer.cpp
     src/sprite_sheet_meta.cpp
     src/animation_component.cpp
+    src/tilemap_component.cpp
 )
 add_library(Engine::Renderer ALIAS engine_renderer)
 
