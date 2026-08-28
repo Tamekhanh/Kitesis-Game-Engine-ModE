@@ -53,6 +53,20 @@ namespace engine::core
             return nullptr;
         }
 
+        template <typename T>
+        std::vector<T *> GetComponents()
+        {
+            std::vector<T *> result;
+            for (auto &c : m_components)
+            {
+                if (T *casted = dynamic_cast<T *>(c.get()))
+                {
+                    result.push_back(casted);
+                }
+            }
+            return result;
+        }
+
         // --- Lifecycle ---
         void Update(float deltaTime);
         void Render();

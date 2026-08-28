@@ -1,8 +1,9 @@
 #pragma once
 #include "editor_state.h"
 
-namespace editor {
+namespace editor
+{
 
-void DrawTilePalettePanel(EditorState& state);
+    void DrawTilePalettePanel(EditorState &state);
 
 }

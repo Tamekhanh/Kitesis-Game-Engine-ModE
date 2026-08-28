@@ -1,8 +1,9 @@
 #pragma once
 #include "engine/core/game_object.h"
 
-namespace editor {
+namespace editor
+{
 
-void DrawAddComponentPopup(engine::core::GameObject& target);
+    void DrawAddComponentPopup(engine::core::GameObject &target);
 
 }

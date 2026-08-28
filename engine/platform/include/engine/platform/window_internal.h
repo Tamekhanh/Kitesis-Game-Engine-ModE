@@ -4,12 +4,13 @@
 
 struct GLFWwindow;
 
-namespace engine::platform {
+namespace engine::platform
+{
 
-class Window;
+    class Window;
 
-// Chỉ dùng nội bộ trong module platform (input.cpp, ...),
-// KHÔNG phải public API cho sandbox/renderer sử dụng.
-GLFWwindow* GetGlfwHandle(Window& window);
+    // Chỉ dùng nội bộ trong module platform (input.cpp, ...),
+    // KHÔNG phải public API cho sandbox/renderer sử dụng.
+    GLFWwindow *GetGlfwHandle(Window &window);
 
 } // namespace engine::platform

@@ -5,6 +5,7 @@
 #include "engine/core/project.h"
 #include "engine/renderer/animation_component.h"
 #include "engine/renderer/tilemap_component.h"
+#include "engine/core/collider_component.h"
 
 #include "sprite_editor_popup.h"
 
@@ -87,6 +88,19 @@ namespace editor
                 ImGui::Text("Grid: %d x %d", sprite.Columns(), sprite.Rows());
                 ImGui::EndGroup();
             }
+        }
+    }
+
+    static void DrawColliderComponentUI(engine::core::ColliderComponent &collider)
+    {
+        if (ImGui::CollapsingHeader("Collider Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::DragFloat2("Offset", &collider.offset.x, 1.0f);
+            ImGui::DragFloat2("Size", &collider.size.x, 1.0f, 1.0f, 2000.0f);
+            ImGui::Checkbox("Is Trigger", &collider.isTrigger);
+            ImGui::TextDisabled(collider.isTrigger
+                                    ? "Trigger: khong can vat ly, chi bao su kien"
+                                    : "Solid: can tro vat ly (can PhysicsComponent de co hieu luc)");
         }
     }
 
@@ -188,6 +202,10 @@ namespace editor
             if (auto *tilemap = dynamic_cast<engine::renderer::TilemapComponent *>(comp.get()))
             {
                 DrawTilemapComponentUI(*tilemap);
+            }
+            if (auto *collider = dynamic_cast<engine::core::ColliderComponent *>(comp.get()))
+            {
+                DrawColliderComponentUI(*collider);
             }
         }
 

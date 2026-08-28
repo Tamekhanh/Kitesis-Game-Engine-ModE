@@ -1,8 +1,9 @@
 #pragma once
 #include "editor_state.h"
 
-namespace editor {
+namespace editor
+{
 
-void DrawAnimationPanel(EditorState& state);
+    void DrawAnimationPanel(EditorState &state);
 
 }

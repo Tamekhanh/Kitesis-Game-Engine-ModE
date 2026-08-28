@@ -4,19 +4,21 @@
 #include <vector>
 #include <memory>
 
-namespace engine::renderer {
+namespace engine::renderer
+{
 
-class SpriteRenderer;
-class Texture2D;
+    class SpriteRenderer;
+    class Texture2D;
 
-class SceneSerializer {
-public:
-    static void Save(engine::core::GameObject& root, const std::filesystem::path& path);
+    class SceneSerializer
+    {
+    public:
+        static void Save(engine::core::GameObject &root, const std::filesystem::path &path);
 
-    static void Load(engine::core::GameObject& root,
-                      const std::filesystem::path& path,
-                      SpriteRenderer& renderer,
-                      std::vector<std::unique_ptr<Texture2D>>& textureLibrary);
-};
+        static void Load(engine::core::GameObject &root,
+                         const std::filesystem::path &path,
+                         SpriteRenderer &renderer,
+                         std::vector<std::unique_ptr<Texture2D>> &textureLibrary);
+    };
 
 } // namespace engine::renderer

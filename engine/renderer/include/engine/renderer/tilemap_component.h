@@ -3,52 +3,54 @@
 #include <vector>
 #include <string>
 
-namespace engine::renderer {
+namespace engine::renderer
+{
 
-class SpriteRenderer;
-class Texture2D;
+    class SpriteRenderer;
+    class Texture2D;
 
-class TilemapComponent : public engine::core::Component {
-public:
-    void OnRender() override;
-    void OnStart() override;
-    
-    unsigned int PreviewTextureId() const;
-    
-    void Resize(int width, int height);
-    void BindTileset(Texture2D& texture, const std::string& texturePath);
+    class TilemapComponent : public engine::core::Component
+    {
+    public:
+        void OnRender() override;
+        void OnStart() override;
 
-    void SetTile(int x, int y, int tileIndex);
-    int GetTile(int x, int y) const;
+        unsigned int PreviewTextureId() const;
 
-    int Width() const { return m_width; }
-    int Height() const { return m_height; }
-    float TileSize() const { return m_tileSize; }
-    void SetTileSize(float size) { m_tileSize = size; }
+        void Resize(int width, int height);
+        void BindTileset(Texture2D &texture, const std::string &texturePath);
 
-    const std::string& TexturePath() const { return m_texturePath; }
-    int TilesetColumns() const { return m_tilesetColumns; }
-    int TilesetRows() const { return m_tilesetRows; }
+        void SetTile(int x, int y, int tileIndex);
+        int GetTile(int x, int y) const;
 
-    static void SetDefaultRenderer(SpriteRenderer* renderer) { s_defaultRenderer = renderer; }
-    static SpriteRenderer* DefaultRenderer() { return s_defaultRenderer; }
+        int Width() const { return m_width; }
+        int Height() const { return m_height; }
+        float TileSize() const { return m_tileSize; }
+        void SetTileSize(float size) { m_tileSize = size; }
 
-private:
-    int Index(int x, int y) const { return y * m_width + x; }
-    bool InBounds(int x, int y) const { return x >= 0 && y >= 0 && x < m_width && y < m_height; }
+        const std::string &TexturePath() const { return m_texturePath; }
+        int TilesetColumns() const { return m_tilesetColumns; }
+        int TilesetRows() const { return m_tilesetRows; }
 
-    SpriteRenderer* m_renderer = nullptr;
-    Texture2D* m_texture = nullptr;
-    std::string m_texturePath;
-    int m_tilesetColumns = 1;
-    int m_tilesetRows = 1;
+        static void SetDefaultRenderer(SpriteRenderer *renderer) { s_defaultRenderer = renderer; }
+        static SpriteRenderer *DefaultRenderer() { return s_defaultRenderer; }
 
-    int m_width = 10;
-    int m_height = 10;
-    float m_tileSize = 32.0f;
-    std::vector<int> m_tiles;
+    private:
+        int Index(int x, int y) const { return y * m_width + x; }
+        bool InBounds(int x, int y) const { return x >= 0 && y >= 0 && x < m_width && y < m_height; }
 
-    static SpriteRenderer* s_defaultRenderer;
-};
+        SpriteRenderer *m_renderer = nullptr;
+        Texture2D *m_texture = nullptr;
+        std::string m_texturePath;
+        int m_tilesetColumns = 1;
+        int m_tilesetRows = 1;
+
+        int m_width = 10;
+        int m_height = 10;
+        float m_tileSize = 32.0f;
+        std::vector<int> m_tiles;
+
+        static SpriteRenderer *s_defaultRenderer;
+    };
 
 } // namespace engine::renderer
