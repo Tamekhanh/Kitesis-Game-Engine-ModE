@@ -26,6 +26,18 @@ namespace engine::core
         const std::vector<std::unique_ptr<GameObject>> &Children() const { return m_children; }
         GameObject *AddChild(std::unique_ptr<GameObject> child);
 
+        void RemoveComponent(Component *comp)
+        {
+            for (auto it = m_components.begin(); it != m_components.end(); ++it)
+            {
+                if (it->get() == comp)
+                {
+                    m_components.erase(it);
+                    return;
+                }
+            }
+        }
+
         // --- Component ---
         template <typename T, typename... Args>
         T *AddComponent(Args &&...args)

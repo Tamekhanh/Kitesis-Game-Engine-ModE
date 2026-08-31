@@ -1,6 +1,7 @@
 #pragma once
 #include "engine/core/component.h"
 #include "engine/renderer/sprite_sheet_meta.h"
+#include "engine/math/vector2.h"
 #include <string>
 
 namespace engine::renderer
@@ -29,6 +30,8 @@ namespace engine::renderer
         int Columns() const { return m_columns; }
         int Rows() const { return m_rows; }
         int FrameIndex() const { return m_frameIndex; }
+
+        engine::math::Vector2 pivot{0.0f, 0.0f};
 
         static void SetDefaultRenderer(SpriteRenderer *renderer) { s_defaultRenderer = renderer; }
         static SpriteRenderer *DefaultRenderer() { return s_defaultRenderer; }

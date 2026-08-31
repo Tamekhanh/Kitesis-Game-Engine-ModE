@@ -42,10 +42,12 @@ namespace engine::renderer
         if (!m_texture)
             return;
         auto worldPos = Owner()->GetWorldPosition();
+        float rotationRad = Owner()->transform.rotation * 0.01745329252f; // độ -> radian (pi/180)
 
         if (m_columns <= 1 && m_rows <= 1)
         {
-            m_renderer->DrawTexturedQuad(worldPos.x, worldPos.y, m_width, m_height, *m_texture);
+            m_renderer->DrawTexturedQuad(worldPos.x, worldPos.y, m_width, m_height, *m_texture,
+                                         pivot.x, pivot.y, rotationRad);
             return;
         }
 
@@ -58,7 +60,7 @@ namespace engine::renderer
         float vMax = (float)(row + 1) / (float)m_rows;
 
         m_renderer->DrawTexturedQuadUV(worldPos.x, worldPos.y, m_width, m_height, *m_texture,
-                                       uMin, vMin, uMax, vMax);
+                                       uMin, vMin, uMax, vMax, pivot.x, pivot.y, rotationRad);
     }
     unsigned int SpriteComponent::PreviewTextureId() const
     {

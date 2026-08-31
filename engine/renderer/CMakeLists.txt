@@ -9,6 +9,7 @@
     src/sprite_sheet_meta.cpp
     src/animation_component.cpp
     src/tilemap_component.cpp
+    src/tilemap_collider_baker.cpp
 )
 add_library(Engine::Renderer ALIAS engine_renderer)
 

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include "engine/renderer/animation_component.h"
 #include "engine/renderer/tilemap_component.h"
+#include "engine/core/tilemap_collider_component.h"
 namespace engine::renderer
 {
 
@@ -27,6 +28,16 @@ namespace engine::renderer
         json componentsJson = json::array();
         for (auto &comp : obj.Components())
         {
+            if (auto *sprite = dynamic_cast<SpriteComponent*>(comp.get())) {
+                json c;
+                c["type"] = "SpriteComponent";
+                c["texturePath"] = sprite->TexturePath();
+                c["width"] = sprite->Width();
+                c["height"] = sprite->Height();
+                c["pivotX"] = sprite->pivot.x;
+                c["pivotY"] = sprite->pivot.y;
+                componentsJson.push_back(c);
+            }
             if (auto *anim = dynamic_cast<AnimationComponent *>(comp.get()))
             {
                 json c;
@@ -63,6 +74,19 @@ namespace engine::renderer
                 }
                 c["tiles"] = tilesJson;
 
+                componentsJson.push_back(c);
+            }
+            if (auto *tc = dynamic_cast<engine::core::TilemapColliderComponent *>(comp.get()))
+            {
+                json c;
+                c["type"] = "TilemapColliderComponent";
+                c["isTrigger"] = tc->isTrigger;
+                json rectsJson = json::array();
+                for (auto &r : tc->rects)
+                {
+                    rectsJson.push_back({{"x", r.offsetX}, {"y", r.offsetY}, {"w", r.width}, {"h", r.height}});
+                }
+                c["rects"] = rectsJson;
                 componentsJson.push_back(c);
             }
         }
@@ -129,6 +153,9 @@ namespace engine::renderer
                     std::string texturePath = c.value("texturePath", "");
 
                     auto *sprite = obj->AddComponent<SpriteComponent>(renderer, w, h);
+
+                    sprite->pivot.x = c.value("pivotX", 0.0f);
+                    sprite->pivot.y = c.value("pivotY", 0.0f);
 
                     if (!texturePath.empty())
                     {
@@ -200,6 +227,23 @@ namespace engine::renderer
                                 tilemap->SetTile(x, y, tiles[i]);
                                 i++;
                             }
+                        }
+                    }
+                }
+                if (type == "TilemapColliderComponent")
+                {
+                    auto *tc = obj->AddComponent<engine::core::TilemapColliderComponent>();
+                    tc->isTrigger = c.value("isTrigger", false);
+                    if (c.contains("rects"))
+                    {
+                        for (auto &rj : c["rects"])
+                        {
+                            engine::core::ColliderRect r;
+                            r.offsetX = rj.value("x", 0.0f);
+                            r.offsetY = rj.value("y", 0.0f);
+                            r.width = rj.value("w", 0.0f);
+                            r.height = rj.value("h", 0.0f);
+                            tc->rects.push_back(r);
                         }
                     }
                 }

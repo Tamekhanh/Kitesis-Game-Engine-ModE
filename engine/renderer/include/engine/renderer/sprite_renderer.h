@@ -15,15 +15,22 @@ namespace engine::renderer
         ~SpriteRenderer();
 
         void Begin(const Camera2D &camera);
-        void DrawQuad(float x, float y, float width, float height,
-                      float r, float g, float b);
-        void DrawTexturedQuad(float x, float y, float width, float height,
-                              const Texture2D &texture);
 
-        // Ban moi: ve dung 1 vung UV cu the tren texture (dung cho sprite sheet)
+        void DrawQuad(float x, float y, float width, float height,
+                      float r, float g, float b,
+                      float pivotX = 0.0f, float pivotY = 0.0f,
+                      float rotationRadians = 0.0f);
+
+        void DrawTexturedQuad(float x, float y, float width, float height,
+                              const Texture2D &texture,
+                              float pivotX = 0.0f, float pivotY = 0.0f,
+                              float rotationRadians = 0.0f);
+
         void DrawTexturedQuadUV(float x, float y, float width, float height,
                                 const Texture2D &texture,
-                                float uMin, float vMin, float uMax, float vMax);
+                                float uMin, float vMin, float uMax, float vMax,
+                                float pivotX = 0.0f, float pivotY = 0.0f,
+                                float rotationRadians = 0.0f);
 
     private:
         void UpdateQuadUVs(float uMin, float vMin, float uMax, float vMax);

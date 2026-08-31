@@ -4,6 +4,12 @@ add_library(engine_core STATIC
     src/project.cpp
     src/component_registry.cpp
     src/collider_component.cpp
+    src/box_collider_component.cpp
+    src/circle_collider_component.cpp
+    src/collision_math.cpp
+    src/tilemap_collider_component.cpp
+    src/physics_component.cpp
+    src/physics_world.cpp
 )
 add_library(Engine::Core ALIAS engine_core)
 

@@ -17,3 +17,10 @@ target_link_libraries(editor PRIVATE
 )
 
 target_include_directories(editor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(MSVC)
+    target_link_options(editor PRIVATE
+        /WHOLEARCHIVE:engine_core
+        /WHOLEARCHIVE:engine_renderer
+    )
+endif()

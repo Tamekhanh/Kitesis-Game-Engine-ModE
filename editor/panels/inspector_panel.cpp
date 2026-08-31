@@ -6,6 +6,11 @@
 #include "engine/renderer/animation_component.h"
 #include "engine/renderer/tilemap_component.h"
 #include "engine/core/collider_component.h"
+#include "engine/core/tilemap_collider_component.h"
+#include "engine/renderer/tilemap_collider_baker.h"
+#include "engine/core/physics_component.h"
+#include "engine/core/box_collider_component.h"
+#include "engine/core/circle_collider_component.h"
 
 #include "sprite_editor_popup.h"
 
@@ -87,29 +92,62 @@ namespace editor
                 ImGui::BeginGroup();
                 ImGui::Text("Grid: %d x %d", sprite.Columns(), sprite.Rows());
                 ImGui::EndGroup();
+
+                ImGui::Spacing();
+                ImGui::Text("Pivot");
+                ImGui::DragFloat2("##pivot", &sprite.pivot.x, 0.01f, 0.0f, 1.0f);
+
+                if (ImGui::SmallButton("Top-Left"))
+                    sprite.pivot = {0.0f, 0.0f};
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Center"))
+                    sprite.pivot = {0.5f, 0.5f};
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Bottom-Ctr"))
+                    sprite.pivot = {0.5f, 1.0f};
             }
         }
     }
 
-    static void DrawColliderComponentUI(engine::core::ColliderComponent &collider)
+    static void DrawBoxColliderComponentUI(engine::core::BoxColliderComponent &collider)
     {
-        if (ImGui::CollapsingHeader("Collider Component", ImGuiTreeNodeFlags_DefaultOpen))
+        if (ImGui::CollapsingHeader("Box Collider Component", ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::DragFloat2("Offset", &collider.offset.x, 1.0f);
             ImGui::DragFloat2("Size", &collider.size.x, 1.0f, 1.0f, 2000.0f);
             ImGui::Checkbox("Is Trigger", &collider.isTrigger);
-            ImGui::TextDisabled(collider.isTrigger
-                                    ? "Trigger: khong can vat ly, chi bao su kien"
-                                    : "Solid: can tro vat ly (can PhysicsComponent de co hieu luc)");
         }
     }
 
-    static void DrawTilemapComponentUI(engine::renderer::TilemapComponent &tilemap)
+    static void DrawCircleColliderComponentUI(engine::core::CircleColliderComponent &collider)
     {
+        if (ImGui::CollapsingHeader("Circle Collider Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::DragFloat2("Offset", &collider.offset.x, 1.0f);
+            ImGui::DragFloat("Radius", &collider.radius, 1.0f, 1.0f, 1000.0f);
+            ImGui::Checkbox("Is Trigger", &collider.isTrigger);
+        }
+    }
+
+    static void DrawPhysicsComponentUI(engine::core::PhysicsComponent &phys)
+    {
+        if (ImGui::CollapsingHeader("Physics Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::DragFloat2("Velocity", &phys.velocity.x, 1.0f);
+            ImGui::Checkbox("Use Gravity", &phys.useGravity);
+            ImGui::DragFloat("Gravity Scale", &phys.gravityScale, 0.1f, 0.0f, 10.0f);
+            ImGui::Checkbox("Is Kinematic", &phys.isKinematic);
+        }
+    }
+
+    static bool DrawTilemapComponentUI(engine::renderer::TilemapComponent &tilemap,
+                                       engine::core::TilemapColliderComponent *existingCollider)
+    {
+        bool requestGenerate = false;
+
         if (ImGui::CollapsingHeader("Tilemap Component", ImGuiTreeNodeFlags_DefaultOpen))
         {
 
-            // --- Gan tileset, giong het co che cua SpriteComponent ---
             std::string label = tilemap.TexturePath().empty()
                                     ? "Keo tileset tu Assets vao day"
                                     : tilemap.TexturePath();
@@ -136,7 +174,6 @@ namespace editor
             ImGui::Spacing();
             ImGui::Separator();
 
-            // --- Kich thuoc luoi tilemap (khac voi kich thuoc luoi tileset o tren) ---
             static int editWidth = tilemap.Width();
             static int editHeight = tilemap.Height();
             static engine::renderer::TilemapComponent *lastTilemap = nullptr;
@@ -152,13 +189,49 @@ namespace editor
             if (ImGui::Button("Resize Grid"))
             {
                 tilemap.Resize(editWidth, editHeight);
+                if (existingCollider)
+                {
+                    engine::renderer::BakeTilemapCollider(tilemap, *existingCollider);
+                }
             }
 
             float tileSize = tilemap.TileSize();
             if (ImGui::DragFloat("Tile Size (px)", &tileSize, 1.0f, 1.0f, 512.0f))
             {
                 tilemap.SetTileSize(tileSize);
+                if (existingCollider)
+                {
+                    engine::renderer::BakeTilemapCollider(tilemap, *existingCollider);
+                }
             }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            if (!existingCollider)
+            {
+                if (ImGui::Button("Generate Collider"))
+                {
+                    requestGenerate = true;
+                }
+                ImGui::TextDisabled("Chua co Tilemap Collider Component");
+            }
+            else
+            {
+                ImGui::TextDisabled("Da co Tilemap Collider Component (xem khoi rieng ben duoi)");
+            }
+        }
+
+        return requestGenerate;
+    }
+
+    static void DrawTilemapColliderComponentUI(engine::core::TilemapColliderComponent &tc)
+    {
+        if (ImGui::CollapsingHeader("Tilemap Collider Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Text("So hinh chu nhat da gop: %d", (int)tc.rects.size());
+            ImGui::Checkbox("Is Trigger", &tc.isTrigger);
+            ImGui::TextDisabled("Tu dong cap nhat khi ve/xoa tile (neu component nay ton tai)");
         }
     }
 
@@ -189,8 +262,15 @@ namespace editor
 
         engine::renderer::SpriteComponent *spriteComp = obj->GetComponent<engine::renderer::SpriteComponent>();
 
+        bool wantGenerateTilemapCollider = false;
+        engine::renderer::TilemapComponent *tilemapForBake = nullptr;
+        engine::core::Component *pendingRemove = nullptr;
+
         for (auto &comp : obj->Components())
         {
+            ImGui::PushID(comp.get());
+            ImVec2 blockStart = ImGui::GetCursorScreenPos();
+
             if (auto *sprite = dynamic_cast<engine::renderer::SpriteComponent *>(comp.get()))
             {
                 DrawSpriteComponentUI(*sprite);
@@ -201,12 +281,61 @@ namespace editor
             }
             if (auto *tilemap = dynamic_cast<engine::renderer::TilemapComponent *>(comp.get()))
             {
-                DrawTilemapComponentUI(*tilemap);
+                auto *existingCollider = obj->GetComponent<engine::core::TilemapColliderComponent>();
+                if (DrawTilemapComponentUI(*tilemap, existingCollider))
+                {
+                    wantGenerateTilemapCollider = true;
+                    tilemapForBake = tilemap;
+                }
             }
-            if (auto *collider = dynamic_cast<engine::core::ColliderComponent *>(comp.get()))
+            if (auto *box = dynamic_cast<engine::core::BoxColliderComponent *>(comp.get()))
             {
-                DrawColliderComponentUI(*collider);
+                DrawBoxColliderComponentUI(*box);
             }
+            if (auto *circle = dynamic_cast<engine::core::CircleColliderComponent *>(comp.get()))
+            {
+                DrawCircleColliderComponentUI(*circle);
+            }
+            if (auto *tc = dynamic_cast<engine::core::TilemapColliderComponent *>(comp.get()))
+            {
+                DrawTilemapColliderComponentUI(*tc);
+            }
+            if (auto *phys = dynamic_cast<engine::core::PhysicsComponent *>(comp.get()))
+            {
+                DrawPhysicsComponentUI(*phys);
+            }
+
+            ImVec2 blockEnd = ImGui::GetCursorScreenPos();
+            blockEnd.x = blockStart.x + ImGui::GetContentRegionAvail().x;
+            ImGui::SetCursorScreenPos(blockStart);
+            ImGui::InvisibleButton("component_area", ImVec2(blockEnd.x - blockStart.x, blockEnd.y - blockStart.y));
+
+            if (ImGui::BeginPopupContextItem("component_context"))
+            {
+                if (ImGui::MenuItem("Delete Component"))
+                {
+                    pendingRemove = comp.get();
+                }
+                ImGui::EndPopup();
+            }
+
+            ImGui::Separator();
+            ImGui::PopID();
+        }
+
+        if (pendingRemove)
+        {
+            obj->RemoveComponent(pendingRemove);
+        }
+
+        if (wantGenerateTilemapCollider && tilemapForBake)
+        {
+            auto *tilemapCollider = obj->GetComponent<engine::core::TilemapColliderComponent>();
+            if (!tilemapCollider)
+            {
+                tilemapCollider = obj->AddComponent<engine::core::TilemapColliderComponent>();
+            }
+            engine::renderer::BakeTilemapCollider(*tilemapForBake, *tilemapCollider);
         }
 
         ImGui::Separator();

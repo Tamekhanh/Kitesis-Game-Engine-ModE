@@ -4,6 +4,10 @@
 #include "engine/core/project.h"
 #include "engine/core/game_object.h"
 #include "engine/core/collider_component.h"
+#include "engine/core/tilemap_collider_component.h"
+#include "engine/core/physics_world.h"
+#include "engine/core/box_collider_component.h"
+#include "engine/core/circle_collider_component.h"
 
 #include "engine/renderer/framebuffer.h"
 #include "engine/renderer/sprite_renderer.h"
@@ -13,6 +17,7 @@
 #include "engine/renderer/scene_serializer.h"
 #include "engine/renderer/sprite_component.h"
 #include "engine/renderer/tilemap_component.h"
+#include "engine/renderer/tilemap_collider_baker.h"
 
 #include <glad/gl.h>
 #include <imgui.h>
@@ -246,6 +251,7 @@ int main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             sceneRoot.Update(deltaTime);
+            engine::core::PhysicsWorld::Step(sceneRoot, deltaTime);
 
             sceneRenderer.Begin(sceneCamera);
             sceneRoot.Render();
@@ -292,24 +298,87 @@ int main()
                 }
             }
 
+            // --- Outline cho ColliderComponent don (co the nhieu cai tren cung GameObject) ---
             if (editorState.selectedObject)
             {
-                auto *collider = editorState.selectedObject->GetComponent<engine::core::ColliderComponent>();
-                if (collider)
+                ImVec2 imageMin = ImGui::GetItemRectMin();
+                ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+                for (auto *box : editorState.selectedObject->GetComponents<engine::core::BoxColliderComponent>())
                 {
-                    float minX, minY, maxX, maxY;
-                    collider->GetWorldBounds(minX, minY, maxX, maxY);
+                    engine::math::Vector2 corners[4];
+                    box->GetCorners(corners);
 
-                    ImVec2 imageMin = ImGui::GetItemRectMin();
-                    ImVec2 rectMin(imageMin.x + minX, imageMin.y + minY);
-                    ImVec2 rectMax(imageMin.x + maxX, imageMin.y + maxY);
+                    ImU32 color = box->isTrigger
+                                      ? IM_COL32(255, 100, 255, 220)
+                                      : IM_COL32(255, 60, 60, 220);
 
-                    ImU32 color = collider->isTrigger
-                                      ? IM_COL32(255, 100, 255, 220) // tim: trigger
-                                      : IM_COL32(255, 60, 60, 220);  // do: collider that
-
-                    ImGui::GetWindowDrawList()->AddRect(rectMin, rectMax, color, 0.0f, 0, 2.0f);
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        int next = (i + 1) % 4;
+                        ImVec2 p1(imageMin.x + corners[i].x, imageMin.y + corners[i].y);
+                        ImVec2 p2(imageMin.x + corners[next].x, imageMin.y + corners[next].y);
+                        drawList->AddLine(p1, p2, color, 2.0f);
+                    }
                 }
+
+                for (auto *circle : editorState.selectedObject->GetComponents<engine::core::CircleColliderComponent>())
+                {
+                    auto center = circle->WorldCenter();
+                    ImVec2 c(imageMin.x + center.x, imageMin.y + center.y);
+
+                    ImU32 color = circle->isTrigger
+                                      ? IM_COL32(255, 100, 255, 220)
+                                      : IM_COL32(255, 60, 60, 220);
+
+                    drawList->AddCircle(c, circle->radius, color, 32, 2.0f);
+                }
+            }
+
+            // --- Outline cho TilemapColliderComponent ---
+            if (editorState.selectedObject)
+            {
+                auto *tmCollider = editorState.selectedObject->GetComponent<engine::core::TilemapColliderComponent>();
+                if (tmCollider)
+                {
+                    ImVec2 imageMin = ImGui::GetItemRectMin();
+                    ImU32 color = tmCollider->isTrigger
+                                      ? IM_COL32(255, 100, 255, 200)
+                                      : IM_COL32(255, 60, 60, 200);
+
+                    for (int i = 0; i < (int)tmCollider->rects.size(); ++i)
+                    {
+                        float minX, minY, maxX, maxY;
+                        tmCollider->GetWorldBounds(i, minX, minY, maxX, maxY);
+                        ImVec2 rectMin(imageMin.x + minX, imageMin.y + minY);
+                        ImVec2 rectMax(imageMin.x + maxX, imageMin.y + maxY);
+                        ImGui::GetWindowDrawList()->AddRect(rectMin, rectMax, color, 0.0f, 0, 2.0f);
+                    }
+                }
+            }
+
+            // --- Highlight tong quat cho GameObject dang chon (khung vang mo, luon hien) ---
+            if (editorState.selectedObject)
+            {
+                ImVec2 imageMin = ImGui::GetItemRectMin();
+                auto worldPos = editorState.selectedObject->GetWorldPosition();
+
+                float hx = 16.0f, hy = 16.0f; // kich thuoc mac dinh neu khong co gi khac de tham chieu
+
+                // Uu tien lay kich thuoc tu SpriteComponent neu co, cho khung khop dung sprite
+                if (auto *sprite = editorState.selectedObject->GetComponent<engine::renderer::SpriteComponent>())
+                {
+                    hx = sprite->Width() * 0.5f;
+                    hy = sprite->Height() * 0.5f;
+                }
+
+                ImVec2 center(imageMin.x + worldPos.x, imageMin.y + worldPos.y);
+                ImVec2 pMin(center.x - hx, center.y - hy);
+                ImVec2 pMax(center.x + hx, center.y + hy);
+                ImGui::GetWindowDrawList()->AddRect(pMin, pMax, IM_COL32(255, 220, 0, 160), 0.0f, 0, 1.5f);
+
+                // Diem tam, luon hien du co Sprite hay khong (vd GameObject rong)
+                ImGui::GetWindowDrawList()->AddCircleFilled(center, 4.0f, IM_COL32(255, 220, 0, 255));
             }
 
             // --- Ve tile bang chuot, chi khi dang chon GameObject co TilemapComponent VA da chon tile ---
@@ -348,6 +417,19 @@ int main()
                         if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
                         {
                             tilemap->SetTile(tileX, tileY, -1);
+                        }
+
+                        // Tu dong cap nhat lai collider ngay khi tha chuot (ket thuc 1 net ve),
+                        // chi ap dung neu GameObject nay da tung Generate Collider truoc do
+                        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) ||
+                            ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                        {
+                            auto *existingCollider =
+                                editorState.selectedObject->GetComponent<engine::core::TilemapColliderComponent>();
+                            if (existingCollider)
+                            {
+                                engine::renderer::BakeTilemapCollider(*tilemap, *existingCollider);
+                            }
                         }
                     }
                 }
