@@ -7,6 +7,7 @@ add_executable(editor
     panels/sprite_editor_popup.cpp
     panels/animation_panel.cpp
     panels/tile_palette_panel.cpp
+    panels/console_panel.cpp
 )
 
 target_link_libraries(editor PRIVATE

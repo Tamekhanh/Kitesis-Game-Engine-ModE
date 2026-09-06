@@ -35,6 +35,7 @@
 #include "panels/sprite_editor_popup.h"
 #include "panels/animation_panel.h"
 #include "panels/tile_palette_panel.h"
+#include "panels/console_panel.h"
 #include <vector>
 
 static void DrawWelcomeScreen()
@@ -235,6 +236,7 @@ int main()
             editor::DrawAnimationPanel(editorState);
             editor::DrawTilePalettePanel(editorState);
             assetBrowser.Draw(editorState);
+            editor::DrawConsolePanel();
             editor::DrawSpriteEditorPopup();
 
             ImGui::Begin("Scene");
