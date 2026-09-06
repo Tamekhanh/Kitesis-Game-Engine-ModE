@@ -61,3 +61,35 @@ FetchContent_Declare(
 )
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 FetchContent_MakeAvailable(json)
+
+FetchContent_Declare(
+    lua
+    GIT_REPOSITORY https://github.com/lua/lua.git
+    GIT_TAG        v5.4.6
+)
+FetchContent_MakeAvailable(lua)
+
+file(GLOB LUA_SOURCES "${lua_SOURCE_DIR}/*.c")
+list(REMOVE_ITEM LUA_SOURCES
+    "${lua_SOURCE_DIR}/lua.c"
+    "${lua_SOURCE_DIR}/luac.c"
+    "${lua_SOURCE_DIR}/onelua.c"
+)
+
+add_library(lua_lib STATIC ${LUA_SOURCES})
+target_include_directories(lua_lib PUBLIC ${lua_SOURCE_DIR})
+if(WIN32)
+    target_compile_definitions(lua_lib PRIVATE LUA_USE_WINDOWS)
+endif()
+
+FetchContent_Declare(
+    sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG        v3.3.0
+)
+FetchContent_MakeAvailable(sol2)
+
+add_library(sol2_lib INTERFACE)
+target_include_directories(sol2_lib INTERFACE ${sol2_SOURCE_DIR}/include)
+target_link_libraries(sol2_lib INTERFACE lua_lib)
+target_compile_features(sol2_lib INTERFACE cxx_std_17)

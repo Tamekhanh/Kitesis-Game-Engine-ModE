@@ -221,7 +221,7 @@ int main()
                         engine::renderer::SceneSerializer::Load(
                             sceneRoot, engine::core::Project::ScenePath("MainScene.kiscene"),
                             sceneRenderer, textureLibrary);
-                        editorState.selectedObject = nullptr;
+                        editorState.SelectGameObject(nullptr);
                     }
                     ImGui::EndMenu();
                 }
@@ -234,7 +234,7 @@ int main()
             editor::DrawInspectorPanel(editorState);
             editor::DrawAnimationPanel(editorState);
             editor::DrawTilePalettePanel(editorState);
-            assetBrowser.Draw();
+            assetBrowser.Draw(editorState);
             editor::DrawSpriteEditorPopup();
 
             ImGui::Begin("Scene");
@@ -453,7 +453,7 @@ int main()
                         sceneRenderer, 80.0f, 80.0f);
                     sprite->BindTexture(*textureLibrary.back(), droppedPath);
 
-                    editorState.selectedObject = newObj;
+                    editorState.SelectGameObject(newObj);
                 }
                 ImGui::EndDragDropTarget();
             }

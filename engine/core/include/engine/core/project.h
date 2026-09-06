@@ -10,7 +10,7 @@ namespace engine::core
     public:
         static bool CreateNew(const std::filesystem::path &rootDir, const std::string &projectName);
         static bool Load(const std::filesystem::path &projectFile);
-
+        static bool IsPathInsideAssets(const std::filesystem::path &path);
         static std::filesystem::path AssetPath(const std::string &relativePath);
         static std::filesystem::path ScenePath(const std::string &relativePath);
 

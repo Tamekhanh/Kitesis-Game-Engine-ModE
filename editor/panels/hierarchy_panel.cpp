@@ -1,6 +1,8 @@
 #include "hierarchy_panel.h"
+#include "engine/core/script_component.h"
 #include <imgui.h>
 #include <cstdio>
+#include <string>
 
 namespace editor
 {
@@ -70,7 +72,7 @@ namespace editor
 
         if (ImGui::IsItemClicked())
         {
-            state.selectedObject = &obj;
+            state.SelectGameObject(&obj);
         }
         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
         {
@@ -95,6 +97,15 @@ namespace editor
                 auto *dragged = *static_cast<engine::core::GameObject **>(payload->Data);
                 pendingReparent.dragged = dragged;
                 pendingReparent.newParent = &obj;
+            }
+            else if (const ImGuiPayload *filePayload = ImGui::AcceptDragDropPayload("ASSET_FILE_PATH"))
+            {
+                std::string droppedPath(static_cast<const char *>(filePayload->Data));
+                if (droppedPath.size() >= 4 && droppedPath.substr(droppedPath.size() - 4) == ".lua")
+                {
+                    auto *script = obj.AddComponent<engine::core::ScriptComponent>();
+                    script->LoadScript(droppedPath);
+                }
             }
             ImGui::EndDragDropTarget();
         }
@@ -134,7 +145,7 @@ namespace editor
         {
             auto newObj = std::make_unique<engine::core::GameObject>("GameObject");
             engine::core::GameObject *raw = root.AddChild(std::move(newObj));
-            state.selectedObject = raw;
+            state.SelectGameObject(raw);
         }
         ImGui::Separator();
 
@@ -186,7 +197,7 @@ namespace editor
                                     (state.selectedObject == pendingDelete || IsDescendant(state.selectedObject, pendingDelete));
             if (selectedAffected)
             {
-                state.selectedObject = nullptr;
+                state.SelectGameObject(nullptr);
             }
             engine::core::GameObject *parent = pendingDelete->Parent();
             if (parent)

@@ -10,6 +10,21 @@ namespace engine::core
     std::string Project::s_name = "";
     bool Project::s_loaded = false;
 
+    bool Project::IsPathInsideAssets(const std::filesystem::path &path)
+    {
+        if (!s_loaded)
+            return false;
+        auto assetsRoot = std::filesystem::weakly_canonical(s_rootDir / "Assets");
+        auto target = std::filesystem::weakly_canonical(path);
+
+        auto rel = std::filesystem::relative(target, assetsRoot);
+        if (rel.empty())
+            return false;
+
+        std::string relStr = rel.generic_string();
+        return relStr.substr(0, 2) != "..";
+    }
+
     bool Project::CreateNew(const std::filesystem::path &rootDir, const std::string &projectName)
     {
         std::filesystem::path projectDir = rootDir / projectName;

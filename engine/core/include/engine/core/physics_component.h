@@ -11,10 +11,12 @@ namespace engine::core
         engine::math::Vector2 velocity{0.0f, 0.0f};
         bool useGravity = true;
         float gravityScale = 1.0f;
-        bool isKinematic = false; // true: khong bi day ra khi va cham solid, van di chuyen theo velocity
+        bool isKinematic = false;
 
+        // --- Xoay ---
         float angularVelocity = 0.0f;
-        float momentOfInertia = 1.0f; 
+        float angularDamping = 0.5f;
+        float rollingFriction = 0.8f;
     };
 
 } // namespace engine::core

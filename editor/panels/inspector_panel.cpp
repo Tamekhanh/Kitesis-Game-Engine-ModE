@@ -1,23 +1,34 @@
 #include "inspector_panel.h"
 #include "add_component_popup.h"
+#include "sprite_editor_popup.h"
+#include "engine/core/box_collider_component.h"
+#include "engine/core/collider_component.h"
+#include "engine/core/circle_collider_component.h"
+#include "engine/core/logger.h"
+#include "engine/core/physics_component.h"
+#include "engine/core/project.h"
+#include "engine/core/script_component.h"
+#include "engine/core/tilemap_collider_component.h"
+#include "engine/renderer/animation_component.h"
 #include "engine/renderer/sprite_component.h"
 #include "engine/renderer/texture2d.h"
-#include "engine/core/project.h"
-#include "engine/renderer/animation_component.h"
 #include "engine/renderer/tilemap_component.h"
-#include "engine/core/collider_component.h"
-#include "engine/core/tilemap_collider_component.h"
 #include "engine/renderer/tilemap_collider_baker.h"
-#include "engine/core/physics_component.h"
-#include "engine/core/box_collider_component.h"
-#include "engine/core/circle_collider_component.h"
-
-#include "sprite_editor_popup.h"
 
 #include <imgui.h>
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <fstream>
 #include <memory>
-#include <vector>
 #include <sstream>
+#include <vector>
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <shellapi.h>
+#endif
 namespace editor
 {
 
@@ -70,9 +81,16 @@ namespace editor
                 if (ImGui::Button("Load"))
                 {
                     std::string fullPath = engine::core::Project::AssetPath(pathBuffer).string();
-                    s_inspectorTextures.push_back(
-                        std::make_unique<engine::renderer::Texture2D>(fullPath));
-                    sprite.BindTexture(*s_inspectorTextures.back(), fullPath);
+                    if (!engine::core::Project::IsPathInsideAssets(fullPath))
+                    {
+                        engine::core::Logger::Error("Duong dan nam ngoai thu muc Assets, khong the load: " + fullPath);
+                    }
+                    else
+                    {
+                        s_inspectorTextures.push_back(
+                            std::make_unique<engine::renderer::Texture2D>(fullPath));
+                        sprite.BindTexture(*s_inspectorTextures.back(), fullPath);
+                    }
                 }
                 ImGui::TreePop();
             }
@@ -137,6 +155,14 @@ namespace editor
             ImGui::Checkbox("Use Gravity", &phys.useGravity);
             ImGui::DragFloat("Gravity Scale", &phys.gravityScale, 0.1f, 0.0f, 10.0f);
             ImGui::Checkbox("Is Kinematic", &phys.isKinematic);
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("Rotation Physics");
+            ImGui::DragFloat("Angular Velocity (deg/s)", &phys.angularVelocity, 1.0f);
+            ImGui::DragFloat("Angular Damping", &phys.angularDamping, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("Rolling Friction", &phys.rollingFriction, 0.01f, 0.0f, 1.0f);
+            ImGui::TextDisabled("Rolling Friction chi co tac dung neu Owner co Circle Collider");
         }
     }
 
@@ -235,13 +261,100 @@ namespace editor
         }
     }
 
+    static void DrawScriptComponentUI(engine::core::ScriptComponent &script)
+    {
+        if (ImGui::CollapsingHeader("Script Component", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            std::string label = script.ScriptPath().empty()
+                                    ? "Keo file .lua tu Assets vao day"
+                                    : script.ScriptPath();
+            ImGui::Button(label.c_str(), ImVec2(-1, 30));
+
+            if (ImGui::BeginDragDropTarget())
+            {
+                if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("ASSET_FILE_PATH"))
+                {
+                    std::string droppedPath(static_cast<const char *>(payload->Data));
+                    script.LoadScript(droppedPath);
+                }
+                ImGui::EndDragDropTarget();
+            }
+
+            static char pathBuffer[256] = "test_script.lua";
+            ImGui::InputText("##scriptpath", pathBuffer, sizeof(pathBuffer));
+            ImGui::SameLine();
+            if (ImGui::Button("Load"))
+            {
+                std::string fullPath = engine::core::Project::AssetPath(pathBuffer).string();
+                script.LoadScript(fullPath);
+            }
+
+            if (script.HasError())
+            {
+                ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "Loi: %s", script.ErrorMessage().c_str());
+            }
+            else if (!script.ScriptPath().empty())
+            {
+                ImGui::TextColored(ImVec4(0.3f, 1, 0.3f, 1), "Script OK");
+            }
+        }
+    }
+
+    static void DrawAssetInspector(const std::filesystem::path &path)
+    {
+        ImGui::Text("Asset: %s", path.filename().string().c_str());
+        ImGui::TextDisabled("%s", path.string().c_str());
+        ImGui::Separator();
+
+        std::string ext = path.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+
+        if (ext == ".lua")
+        {
+            ImGui::Text("Loai: Lua Script");
+            ImGui::Spacing();
+            ImGui::TextDisabled("Noi dung (chi xem, double-click de sua bang app ngoai):");
+
+            std::ifstream file(path);
+            std::stringstream buffer;
+            if (file.is_open())
+            {
+                buffer << file.rdbuf();
+            }
+
+            ImGui::BeginChild("script_preview", ImVec2(-1, 300), true);
+            ImGui::TextUnformatted(buffer.str().c_str());
+            ImGui::EndChild();
+        }
+        else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
+        {
+            ImGui::Text("Loai: Hinh anh");
+        }
+        else if (ext == ".kiscene")
+        {
+            ImGui::Text("Loai: Scene file");
+        }
+        else
+        {
+            ImGui::Text("Loai: File");
+        }
+    }
+
     void DrawInspectorPanel(EditorState &state)
     {
         ImGui::Begin("Inspector");
 
+        if (!state.selectedAssetPath.empty())
+        {
+            DrawAssetInspector(state.selectedAssetPath);
+            ImGui::End();
+            return;
+        }
+
         if (!state.selectedObject)
         {
-            ImGui::TextDisabled("Chua chon GameObject nao");
+            ImGui::TextDisabled("Chua chon gi ca");
             ImGui::End();
             return;
         }
@@ -303,6 +416,10 @@ namespace editor
             if (auto *phys = dynamic_cast<engine::core::PhysicsComponent *>(comp.get()))
             {
                 DrawPhysicsComponentUI(*phys);
+            }
+            if (auto *script = dynamic_cast<engine::core::ScriptComponent *>(comp.get()))
+            {
+                DrawScriptComponentUI(*script);
             }
 
             ImVec2 blockEnd = ImGui::GetCursorScreenPos();
